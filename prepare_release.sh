@@ -5,17 +5,15 @@ TEMP_DIR="releases/"$NAME"_"$VERSION
 npm run build
 
 rm -rf $TEMP_DIR
+mkdir -p $TEMP_DIR
 rm -f $TEMP_DIR.zip
 
-mkdir -p $TEMP_DIR
-rm -r build/src/__tests__
-cp -r build/src/* $TEMP_DIR
-cp LICENSE $TEMP_DIR
-cp README.md $TEMP_DIR
+cp -r build/* $TEMP_DIR
+
+rm -r dist
 rm -r build
 
 cd releases
 zip -r $NAME"_"$VERSION.zip $NAME"_"$VERSION
 cd ..
-rm -r $TEMP_DIR
 echo Created $NAME"_"$VERSION.zip in $(pwd)/releases

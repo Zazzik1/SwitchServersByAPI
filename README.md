@@ -15,7 +15,7 @@ An extension for [Dimensions](https://github.com/popstarfreas/Dimensions), addin
 4. Run `npm install express` inside the Dimensions directory. It is a required dependency.
 
 ## Configuration
-Edit the `config.js` file to update the following settings:
+Edit the `config.json` file to update the following settings:
 - `port` - The port on which the API server listens for incoming requests.
 - `verbosity` - Accepts values 0, 1, or 2. Controls the level of logging detail the extension provides.
 
