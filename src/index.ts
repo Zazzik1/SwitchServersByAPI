@@ -13,7 +13,7 @@ class SwitchServersByAPI implements Extension {
     server?: ReturnType<Application['listen']>;
     constructor() {
         this.name = 'SwitchServersByAPI';
-        this.version = 'v1.0.0';
+        this.version = 'v1.0.1';
         this.author = 'Zazzik1';
         this.reloadable = false;
         this.clients = new Map();
@@ -28,6 +28,7 @@ class SwitchServersByAPI implements Extension {
         return [...this.clients.values()].map((client) => ({
             uuid: client.UUID,
             name: client.getName(),
+            serverName: client.server.name,
         }));
     }
 

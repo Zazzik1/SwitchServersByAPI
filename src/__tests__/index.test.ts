@@ -38,6 +38,7 @@ const CLIENTS_MOCK = Object.freeze([
             UUID: 'uuid_1',
             changeServer: changeServerMockClient1,
             servers: SERVERS_MOCK,
+            server: { name: 'serverA' },
         },
     ],
     [
@@ -47,6 +48,7 @@ const CLIENTS_MOCK = Object.freeze([
             UUID: 'uuid_2',
             changeServer: changeServerMockClient2,
             servers: SERVERS_MOCK,
+            server: { name: 'serverA' },
         },
     ],
     [
@@ -56,6 +58,7 @@ const CLIENTS_MOCK = Object.freeze([
             UUID: 'uuid_3',
             changeServer: changeServerMockClient3,
             servers: SERVERS_MOCK,
+            server: { name: 'serverA' },
         },
     ],
 ]);
@@ -97,14 +100,17 @@ describe('SwitchServersByAPI', () => {
             {
                 name: 'name_1',
                 uuid: 'uuid_1',
+                serverName: 'serverA',
             },
             {
                 name: 'name_2',
                 uuid: 'uuid_2',
+                serverName: 'serverA',
             },
             {
                 name: 'name_3',
                 uuid: 'uuid_3',
+                serverName: 'serverA',
             },
         ]);
     });
@@ -130,6 +136,9 @@ describe('SwitchServersByAPI', () => {
             servers: SERVERS_MOCK,
             getName: expect.anything(),
             changeServer: expect.anything(),
+            server: {
+                name: 'serverA',
+            },
         });
         expect(extension.clients.has('uuid_2')).toBe(false);
         expect(extension.clients.get('uuid_3')).toStrictEqual({
@@ -137,6 +146,9 @@ describe('SwitchServersByAPI', () => {
             servers: SERVERS_MOCK,
             getName: expect.anything(),
             changeServer: expect.anything(),
+            server: {
+                name: 'serverA',
+            },
         });
     });
     test('GET / returns a list of clients and servers', () => {
@@ -164,14 +176,17 @@ describe('SwitchServersByAPI', () => {
                 {
                     name: 'name_1',
                     uuid: 'uuid_1',
+                    serverName: 'serverA',
                 },
                 {
                     name: 'name_2',
                     uuid: 'uuid_2',
+                    serverName: 'serverA',
                 },
                 {
                     name: 'name_3',
                     uuid: 'uuid_3',
+                    serverName: 'serverA',
                 },
             ],
             servers: ['serverA', 'serverB'],

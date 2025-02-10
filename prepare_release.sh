@@ -4,7 +4,9 @@ VERSION=$(cat package.json | jq -r ".version")
 TEMP_DIR="releases/"$NAME"_"$VERSION
 npm run build
 
-rm -r $TEMP_DIR
+rm -rf $TEMP_DIR
+rm -f $TEMP_DIR.zip
+
 mkdir -p $TEMP_DIR
 rm -r build/src/__tests__
 cp -r build/src/* $TEMP_DIR
