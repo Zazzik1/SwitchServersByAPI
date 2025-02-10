@@ -13,7 +13,7 @@ class SwitchServersByAPI implements Extension {
     server?: ReturnType<Application['listen']>;
     constructor() {
         this.name = 'SwitchServersByAPI';
-        this.version = 'v1.0.1';
+        this.version = 'v1.0.2';
         this.author = 'Zazzik1';
         this.reloadable = false;
         this.clients = new Map();

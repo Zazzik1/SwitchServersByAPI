@@ -1,0 +1,61 @@
+name: Node.js CI
+
+on: [push, pull_request]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18.x', '20.x']
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+          
+      - name: Install and test
+        run: |
+          npm ci
+          npm run test
+  
+      - name: Prepare Release Artifact
+        id: prepare_release
+        run: |
+          chmod +x ./prepare_release.sh
+          ./prepare_release.sh
+      
+      - name: Upload Release Artifact
+        uses: actions/upload-artifact@v4
+        if: contains(github.ref, 'tags/v')
+        continue-on-error: true
+        with:
+          name: release-archive
+          path: releases/*
+
+  release:
+    runs-on: ubuntu-latest
+    if: contains(github.ref, 'tags/v')
+    needs: [build_and_test]
+
+    steps:
+      - name: Download Release Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-archive
+          path: releases
+
+      - name: Check if tag matches the version
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/v}
+          ls "releases/SwitchServersByAPI_$TAG_NAME.zip"
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "SwitchServersByAPI v${{ env.TAG_NAME }}"
+          files: releases/*
