@@ -1,13 +1,17 @@
 {
     "name": "switch_servers_by_api",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "main": "src/index.ts",
     "scripts": {
-        "build": "tsc",
+        "build": "rimraf dist build && tsc && rollup -c rollup.config.js",
         "start:dev": "nodemon src/index.ts",
         "test": "jest"
     },
-    "keywords": [],
+    "keywords": [
+        "terraria",
+        "dimensions",
+        "api"
+    ],
     "author": "Zazzik1",
     "license": "MIT",
     "description": "A plugin for Dimensions, adding API to easily switch players to different servers using external services.",
@@ -15,15 +19,21 @@
         "type": "git",
         "url": "https://github.com/Zazzik1/SwitchServersByAPI.git"
     },
-    "dependencies": {
+    "peerDependencies": {
         "dimensions": "npm:@popstarfreas/dimensions@^6.0.0-beta.1",
         "express": "^4.21.2"
     },
     "devDependencies": {
+        "@rollup/plugin-commonjs": "^28.0.2",
+        "@rollup/plugin-json": "^6.1.0",
+        "@rollup/plugin-node-resolve": "^16.0.0",
         "@types/express": "^5.0.0",
         "@types/jest": "^29.5.14",
         "jest": "^29.7.0",
         "nodemon": "^3.1.9",
+        "rimraf": "^6.0.1",
+        "rollup": "^4.34.6",
+        "rollup-plugin-esbuild-minify": "^1.2.0",
         "ts-jest": "^29.2.5",
         "ts-node": "^10.9.2",
         "typescript": "^5.7.3"

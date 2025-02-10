@@ -1,6 +1,6 @@
 import SwitchServersByAPI from '../index';
 import packageJson from '../../package.json';
-import config from '../config';
+import config from '../config.json';
 
 const closeServerMock = jest.fn();
 const listenMock = jest.fn().mockReturnValue({ close: closeServerMock });

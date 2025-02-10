@@ -2,7 +2,7 @@ import Client from 'dimensions/client';
 import { Extension } from 'dimensions/extension';
 import TerrariaServer from 'dimensions/terrariaserver';
 import express, { Application } from 'express';
-import config from './config';
+import configLoader, { UserConfig } from './configLoader';
 
 class SwitchServersByAPI implements Extension {
     name: string;
@@ -11,10 +11,14 @@ class SwitchServersByAPI implements Extension {
     reloadable: boolean;
     clients: Map<string, Client>;
     server?: ReturnType<Application['listen']>;
+    config: UserConfig;
+
     constructor() {
-        this.name = 'SwitchServersByAPI';
-        this.version = 'v1.0.3';
-        this.author = 'Zazzik1';
+        const { userConfig, packageConfig } = configLoader.load();
+        this.config = userConfig;
+        this.name = packageConfig.name;
+        this.version = `v${packageConfig.version}`;
+        this.author = packageConfig.author;
         this.reloadable = false;
         this.clients = new Map();
 
@@ -32,7 +36,8 @@ class SwitchServersByAPI implements Extension {
         }));
     }
 
-    protected log(...text: string[]) {
+    protected log(minimalVerbosity: number, ...text: string[]) {
+        if (this.config.verbosity < minimalVerbosity) return;
         console.log(`[Extension] ${this.name}: `, ...text);
     }
 
@@ -76,40 +81,38 @@ class SwitchServersByAPI implements Extension {
                 });
                 return;
             }
-            if (config.verbosity >= 2)
-                this.log(
-                    `Client with UUID "${clientUUID}" has been switched from "${client.server.name}" to "${serverName}".`,
-                );
+            this.log(
+                2,
+                `Client with UUID "${clientUUID}" has been switched from "${client.server.name}" to "${serverName}".`,
+            );
             res.sendStatus(200);
         });
-        this.server = app.listen(config.port, '0.0.0.0', () => {
-            if (config.verbosity >= 1)
-                this.log(
-                    `The API server is listening on http://127.0.0.1:${config.port}`,
-                );
+        this.server = app.listen(this.config.port, '0.0.0.0', () => {
+            this.log(
+                1,
+                `The API server is listening on http://127.0.0.1:${this.config.port}`,
+            );
         });
     }
 
     stop() {
         if (this.server) {
-            if (config.verbosity >= 1)
-                this.log('The API server has been closed.');
+            this.log(1, 'The API server has been closed.');
         }
         this.server?.close();
     }
 
     clientFullyConnectedHandler(client: Client) {
         this.clients.set(client.UUID, client);
-        if (config.verbosity >= 2)
-            this.log(`Client with UUID "${client.UUID}" has connected.`);
+        this.log(2, `Client with UUID "${client.UUID}" has connected.`);
     }
 
     serverDisconnectHandler(server: TerrariaServer) {
         this.clients.delete(server.client.UUID);
-        if (config.verbosity >= 2)
-            this.log(
-                `Client with UUID "${server.client.UUID}" has disconnected.`,
-            );
+        this.log(
+            2,
+            `Client with UUID "${server.client.UUID}" has disconnected.`,
+        );
         return false;
     }
 }
