@@ -10,7 +10,7 @@ class ConfigLoader {
         let userConfig: UserConfig;
         try {
             userConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-        } catch (error) {
+        } catch {
             throw new Error(
                 `[Extension] ${EXTENSION_NAME}: Failed to load config from ${configPath}. Does this file exist?`,
             );
@@ -23,10 +23,12 @@ class ConfigLoader {
         };
         return { userConfig, packageConfig };
     }
+    /**
+     * Uses extensions/<NAME>_<VERSION>/config.json when extension is imported.
+     * Uses ./config.json in tests and in dev mode.
+     * It assumes that the name of directory is always <NAME>_<VERSION>.
+     */
     static getConfigPath() {
-        // Uses extensions/<NAME>_<VERSION>/config.json when extension is imported.
-        // Uses ./config.json in tests and in dev mode.
-        // It assumes that the name of directory is always <NAME>_<VERSION>.
         if (process.env.NODE_ENV === 'production')
             return path.resolve(
                 'extensions',

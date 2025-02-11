@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 import HTTPServer from '../../util/HTTPServer';
-import { GETRequest, POSTRequest, Response } from '../../util/HTTPServer/types';
+import { POSTRequest } from '../../util/HTTPServer/types';
 import http from 'http';
 
 jest.mock('http', () => ({
@@ -24,7 +24,7 @@ describe('HTTPServer', () => {
     test('get method adds a GET handler', () => {
         const server = new HTTPServer();
         const path = '/my_custom_path';
-        const handler = (req: GETRequest, res: Response) => {};
+        const handler = () => {};
         server.get(path, handler);
         expect(server.handlers.get(`GET ${path}`)).toBe(handler);
     });
@@ -32,7 +32,7 @@ describe('HTTPServer', () => {
     test('post method adds a POST handler', () => {
         const server = new HTTPServer();
         const path = '/my_custom_path';
-        const handler = (req: POSTRequest, res: Response) => {};
+        const handler = () => {};
         server.post(path, handler);
         expect(server.handlers.get(`POST ${path}`)).toBe(handler);
     });
@@ -172,7 +172,7 @@ describe('HTTPServer', () => {
             const fullBodyStr = JSON.stringify({
                 hello: 'test123',
             });
-            server.handlers.set('POST /abcdef', (req, res) => {
+            server.handlers.set('POST /abcdef', (req) => {
                 expect((req as POSTRequest).body).toStrictEqual(
                     JSON.parse(fullBodyStr),
                 );

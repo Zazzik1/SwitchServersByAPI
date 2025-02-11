@@ -45,7 +45,7 @@ class HTTPServer implements IHTTPServer {
                     body += chunk;
                 });
                 req.on('end', () => {
-                    let parsedBody: Record<string, string> = {};
+                    const parsedBody: Record<string, string> = {};
                     try {
                         Object.entries(JSON.parse(body)).forEach(
                             ([key, value]) => (parsedBody[key] = value + ''),

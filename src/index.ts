@@ -63,7 +63,10 @@ class SwitchServersByAPI implements Extension {
                 const servers = values.length
                     ? Object.keys(values[0].servers)
                     : [];
-                res.json(200, { servers, clients: this.getClientsArray() });
+                res.json(200, {
+                    servers,
+                    clients: this.getClientsArray(),
+                });
             });
         if (!this.config.disabledEndpoints['/'].POST)
             this.server.post('/', async (req, res) => {
@@ -88,7 +91,7 @@ class SwitchServersByAPI implements Extension {
                 }
                 try {
                     client.changeServer(client.servers[serverName]);
-                } catch (err) {
+                } catch {
                     res.json(500, {
                         error: 'Failed to switch server.',
                         clientUUID: client.UUID,
