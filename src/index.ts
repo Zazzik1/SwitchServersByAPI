@@ -57,49 +57,53 @@ class SwitchServersByAPI implements Extension {
     /** Starts the API server. */
     startAPIServer() {
         this.server = new HTTPServer();
-        this.server.get('/', async (_req, res) => {
-            const values = [...this.clients.values()];
-            const servers = values.length ? Object.keys(values[0].servers) : [];
-            res.json(200, { servers, clients: this.getClientsArray() });
-        });
-        this.server.post('/', async (req, res) => {
-            const { clientUUID, serverName } = req.body;
-            if (clientUUID == null || !this.clients.has(clientUUID)) {
-                res.json(404, {
-                    error: 'Client with such UUID does not exist.',
-                    clientUUID,
-                    availableClients: this.getClientsArray(),
-                });
-                return;
-            }
-            const client = this.clients.get(clientUUID)!;
-            const servers = Object.keys(client.servers);
-            if (serverName == null || !servers.includes(serverName)) {
-                res.json(404, {
-                    error: 'Server does not exist.',
-                    serverName,
-                    availableServers: servers,
-                });
-                return;
-            }
-            try {
-                client.changeServer(client.servers[serverName]);
-            } catch (err) {
-                res.json(500, {
-                    error: 'Failed to switch server.',
-                    clientUUID: client.UUID,
-                    clientName: client.getName(),
-                    fromServer: client.server.name,
-                    toServer: serverName,
-                });
-                return;
-            }
-            this.log({
-                level: Verbosity.VERBOSE,
-                message: `Client with UUID "${clientUUID}" has been switched from "${client.server.name}" to "${serverName}".`,
+        if (!this.config.disabledEndpoints['/'].GET)
+            this.server.get('/', async (_req, res) => {
+                const values = [...this.clients.values()];
+                const servers = values.length
+                    ? Object.keys(values[0].servers)
+                    : [];
+                res.json(200, { servers, clients: this.getClientsArray() });
             });
-            res.send(200, 'ok');
-        });
+        if (!this.config.disabledEndpoints['/'].POST)
+            this.server.post('/', async (req, res) => {
+                const { clientUUID, serverName } = req.body;
+                if (clientUUID == null || !this.clients.has(clientUUID)) {
+                    res.json(404, {
+                        error: 'Client with such UUID does not exist.',
+                        clientUUID,
+                        availableClients: this.getClientsArray(),
+                    });
+                    return;
+                }
+                const client = this.clients.get(clientUUID)!;
+                const servers = Object.keys(client.servers);
+                if (serverName == null || !servers.includes(serverName)) {
+                    res.json(404, {
+                        error: 'Server does not exist.',
+                        serverName,
+                        availableServers: servers,
+                    });
+                    return;
+                }
+                try {
+                    client.changeServer(client.servers[serverName]);
+                } catch (err) {
+                    res.json(500, {
+                        error: 'Failed to switch server.',
+                        clientUUID: client.UUID,
+                        clientName: client.getName(),
+                        fromServer: client.server.name,
+                        toServer: serverName,
+                    });
+                    return;
+                }
+                this.log({
+                    level: Verbosity.VERBOSE,
+                    message: `Client with UUID "${clientUUID}" has been switched from "${client.server.name}" to "${serverName}".`,
+                });
+                res.send(200, 'ok');
+            });
         this.server.listen(this.config.port, '0.0.0.0', () => {
             this.log({
                 message: `The API server is now live at http://127.0.0.1:${this.config.port} ✅`,

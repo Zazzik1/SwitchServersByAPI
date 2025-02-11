@@ -5,8 +5,14 @@ export enum Verbosity {
 }
 
 export type UserConfig = {
-    port: number;
     verbosity: Verbosity;
+    port: number;
+    disabledEndpoints: {
+        '/': {
+            GET: boolean;
+            POST: boolean;
+        };
+    };
 };
 
 export type PackageConfig = {

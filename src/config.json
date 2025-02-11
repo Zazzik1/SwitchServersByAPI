@@ -1,4 +1,10 @@
 {
     "port": 3000,
-    "verbosity": 1
+    "verbosity": 1,
+    "disabledEndpoints": {
+        "/": {
+            "GET": false,
+            "POST": false
+        }
+    }
 }
