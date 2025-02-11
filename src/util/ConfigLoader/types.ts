@@ -21,3 +21,8 @@ export type PackageConfig = {
     name: string;
     githubUrl: string;
 };
+
+export type Config = {
+    packageConfig: PackageConfig;
+    userConfig: UserConfig;
+};

@@ -71,7 +71,7 @@ describe('SwitchServersByAPI', () => {
         expect(extension.name).toBe('SwitchServersByAPI');
         expect(extension.author).toBe(packageJson.author);
         expect(extension.version).toBe(`v${packageJson.version}`);
-        expect(extension.reloadable).toBe(false);
+        expect(extension.reloadable).toBe(true);
     });
     test('the API server should start listening when object is constructed', () => {
         const processOnSpy = jest.spyOn(process, 'on');

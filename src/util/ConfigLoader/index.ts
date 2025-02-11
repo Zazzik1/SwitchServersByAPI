@@ -1,11 +1,11 @@
 import fs from 'fs';
 import { version, author, repository } from '../../../package.json';
 import { EXTENSION_NAME } from './const';
-import { PackageConfig, UserConfig } from './types';
+import { Config, PackageConfig, UserConfig } from './types';
 import path from 'path';
 
 class ConfigLoader {
-    static load() {
+    static load(): Config {
         const configPath = ConfigLoader.getConfigPath();
         let userConfig: UserConfig;
         try {
@@ -28,7 +28,7 @@ class ConfigLoader {
      * Uses ./config.json in tests and in dev mode.
      * It assumes that the name of directory is always <NAME>_<VERSION>.
      */
-    static getConfigPath() {
+    static getConfigPath(): string {
         if (process.env.NODE_ENV === 'production')
             return path.resolve(
                 'extensions',

@@ -11,6 +11,7 @@ class SwitchServersByAPI implements Extension {
     author: string;
     githubUrl: string;
     reloadable: boolean;
+    reloadName: string;
     clients: Map<string, Client>;
     server?: HTTPServer;
     config: UserConfig;
@@ -22,13 +23,22 @@ class SwitchServersByAPI implements Extension {
         this.version = `v${packageConfig.version}`;
         this.author = packageConfig.author;
         this.githubUrl = packageConfig.githubUrl;
-        this.reloadable = false;
+        this.reloadable = true;
+        this.reloadName = 'reload_switch_servers_by_api';
         this.clients = new Map();
 
-        this.startAPIServer();
+        process.on('SIGTERM', () => this.stopAPIServer());
+        process.on('SIGINT', () => this.stopAPIServer());
 
-        process.on('SIGTERM', this.stopAPIServer.bind(this));
-        process.on('SIGINT', this.stopAPIServer.bind(this));
+        this.startAPIServer();
+    }
+
+    reload() {
+        this.stopAPIServer(() => {
+            const { userConfig } = ConfigLoader.load();
+            this.config = userConfig;
+            this.startAPIServer();
+        });
     }
 
     getClientsArray() {
@@ -55,7 +65,7 @@ class SwitchServersByAPI implements Extension {
     }
 
     /** Starts the API server. */
-    startAPIServer() {
+    startAPIServer(callback?: () => void) {
         this.server = new HTTPServer();
         if (!this.config.disabledEndpoints['/'].GET)
             this.server.get('/', async (_req, res) => {
@@ -112,11 +122,12 @@ class SwitchServersByAPI implements Extension {
                 message: `The API server is now live at http://127.0.0.1:${this.config.port} ✅`,
                 submessage: `🌟 Check out the project on GitHub for updates: ${this.githubUrl}`,
             });
+            callback?.();
         });
     }
 
     /** Stops the API server. */
-    stopAPIServer() {
+    stopAPIServer(callback?: () => void) {
         this.log({
             message: 'The API server is now shutting down.',
         });
@@ -128,6 +139,7 @@ class SwitchServersByAPI implements Extension {
             this.log({
                 message: 'The API server has been shut down. Goodbye! ✨🔌',
             });
+            callback?.();
         });
     }
 
