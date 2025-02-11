@@ -5,7 +5,8 @@
     "scripts": {
         "build": "rimraf dist build && tsc && rollup -c rollup.config.js",
         "start:dev": "nodemon src/index.dev.ts",
-        "test": "jest"
+        "test": "jest",
+        "test:coverage": "jest --coverage"
     },
     "keywords": [
         "terraria",
