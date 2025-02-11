@@ -1,4 +1,4 @@
-import { createServer, Server } from 'http';
+import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import { Handler, IHTTPServer, Method, Response } from './types';
 
 class HTTPServer implements IHTTPServer {
@@ -6,8 +6,11 @@ class HTTPServer implements IHTTPServer {
     server: Server;
     constructor() {
         this.handlers = new Map();
-        this.server = createServer((req, res) => {
-            const handleNotFound = () => response.send(404, 'Not Found');
+        this.server = createServer(this.createController());
+    }
+
+    createController(): (req: IncomingMessage, res: ServerResponse) => void {
+        return (req, res) => {
             const response: Response = {
                 res,
                 json: (status, data) => {
@@ -21,6 +24,7 @@ class HTTPServer implements IHTTPServer {
                     res.end(data);
                 },
             };
+            const handleNotFound = () => response.send(404, 'Not Found');
             if (!req.url) return handleNotFound();
             const reqUrl = new URL(req.url, `http://${req.headers.host}`);
             const path = reqUrl.pathname;
@@ -64,7 +68,7 @@ class HTTPServer implements IHTTPServer {
             } else {
                 handleNotFound();
             }
-        });
+        };
     }
 
     protected request(method: Method, path: string, handler: Handler<Method>) {

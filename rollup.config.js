@@ -4,6 +4,7 @@ const path = require('path');
 const commonjs = require('@rollup/plugin-commonjs');
 const nodeResolve = require('@rollup/plugin-node-resolve');
 const jsonPlugin = require('@rollup/plugin-json');
+const replacePlugin = require('@rollup/plugin-replace');
 const { minify } = require('rollup-plugin-esbuild-minify');
 
 const copy = (src, dest) => {
@@ -36,6 +37,10 @@ module.exports = {
                 copy(['LICENSE'], ['build', 'LICENSE']);
             },
         },
+        replacePlugin({
+            'process.env.NODE_ENV': JSON.stringify('production'),
+            preventAssignment: true,
+        }),
         minify(),
     ],
 };

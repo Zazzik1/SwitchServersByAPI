@@ -1,22 +1,12 @@
 import fs from 'fs';
-import path from 'path';
 import { version, author, repository } from '../../../package.json';
 import { EXTENSION_NAME } from './const';
 import { PackageConfig, UserConfig } from './types';
+import path from 'path';
 
 class ConfigLoader {
     static load() {
-        // Uses extensions/<NAME>_<VERSION>/config.json when extension is imported.
-        // Uses ./config.json in tests and in dev mode.
-        // It assumes that the name of directory is always <NAME>_<VERSION>.
-        const configPath =
-            typeof __dirname === 'undefined'
-                ? path.resolve(
-                      'extensions',
-                      `${EXTENSION_NAME}_${version}`,
-                      'config.json',
-                  )
-                : path.resolve(__dirname, '..', '..', 'config.json');
+        const configPath = ConfigLoader.getConfigPath();
         let userConfig: UserConfig;
         try {
             userConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
@@ -32,6 +22,18 @@ class ConfigLoader {
             githubUrl: repository.url.slice(0, -4), // remove .git suffix
         };
         return { userConfig, packageConfig };
+    }
+    static getConfigPath() {
+        // Uses extensions/<NAME>_<VERSION>/config.json when extension is imported.
+        // Uses ./config.json in tests and in dev mode.
+        // It assumes that the name of directory is always <NAME>_<VERSION>.
+        if (process.env.NODE_ENV === 'production')
+            return path.resolve(
+                'extensions',
+                `${EXTENSION_NAME}_${version}`,
+                'config.json',
+            );
+        return path.resolve(__dirname, '..', '..', 'config.json');
     }
 }
 

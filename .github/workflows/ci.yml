@@ -20,7 +20,7 @@ jobs:
       - name: Install and test
         run: |
           npm ci
-          npm run test
+          npm run test:ci
   
       - name: Prepare Release Artifact
         id: prepare_release
