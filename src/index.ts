@@ -50,7 +50,7 @@ class SwitchServersByAPI implements Extension {
     }
 
     /** Logs the provided message to stdout if the verbosity set in config is at least `level`. */
-    protected log({
+    log({
         level = Verbosity.NORMAL,
         message,
         submessage,
