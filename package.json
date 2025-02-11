@@ -1,10 +1,10 @@
 {
     "name": "switch_servers_by_api",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "main": "src/index.ts",
     "scripts": {
         "build": "rimraf dist build && tsc && rollup -c rollup.config.js",
-        "start:dev": "nodemon src/index.ts",
+        "start:dev": "nodemon src/index.dev.ts",
         "test": "jest"
     },
     "keywords": [
