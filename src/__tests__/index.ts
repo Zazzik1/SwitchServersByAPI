@@ -1,32 +1,29 @@
 import SwitchServersByAPI from '../index';
 import packageJson from '../../package.json';
 import config from '../config.json';
+import HTTPServer from '../util/HTTPServer';
+import ConfigLoader from '../util/ConfigLoader';
 
-const closeServerMock = jest.fn();
-const listenMock = jest.fn().mockReturnValue({ close: closeServerMock });
 let handlersGet: unknown[] = [];
 let handlersPost: unknown[] = [];
 const changeServerMockClient1 = jest.fn();
 const changeServerMockClient2 = jest.fn();
 const changeServerMockClient3 = jest.fn();
 
-jest.mock('express', () => {
-    return Object.assign(
-        jest.fn(() => ({
-            use: jest.fn(),
-            get: jest
-                .fn()
-                .mockImplementation((...args) => handlersGet.push(args)),
-            post: jest
-                .fn()
-                .mockImplementation((...args) => handlersPost.push(args)),
-            listen: listenMock,
-        })),
-        {
-            json: jest.fn(),
-        },
-    );
-});
+jest.spyOn(console, 'log').mockImplementation(() => {});
+const serverCloseMock = jest
+    .spyOn(HTTPServer.prototype, 'close')
+    .mockImplementation(() => {});
+const serverListenMock = jest
+    .spyOn(HTTPServer.prototype, 'listen')
+    // @ts-expect-error mock
+    .mockImplementation(() => {});
+jest.spyOn(HTTPServer.prototype, 'get').mockImplementation((...args) =>
+    handlersGet.push(args),
+);
+jest.spyOn(HTTPServer.prototype, 'post').mockImplementation((...args) =>
+    handlersPost.push(args),
+);
 
 const SERVERS_MOCK = Object.freeze({ serverA: {}, serverB: {} });
 
@@ -75,23 +72,102 @@ describe('SwitchServersByAPI', () => {
         expect(extension.name).toBe('SwitchServersByAPI');
         expect(extension.author).toBe(packageJson.author);
         expect(extension.version).toBe(`v${packageJson.version}`);
-        expect(extension.reloadable).toBe(false);
+        expect(extension.reloadable).toBe(true);
+        expect(extension.reloadName).toBe('reload_switch_servers_by_api');
     });
-    test('the API server should start listening when object is constructed', () => {
-        expect(listenMock).not.toHaveBeenCalled();
-        new SwitchServersByAPI();
-        expect(listenMock).toHaveBeenCalledTimes(1);
-        expect(listenMock).toHaveBeenCalledWith(
-            config.port,
-            '0.0.0.0',
-            expect.anything(),
-        );
-    });
-    test('the API server should stop listening when stop method is called', () => {
+
+    test('reload method should reload the extension', () => {
+        const configLoaderMock = jest.spyOn(ConfigLoader, 'load');
         const extension = new SwitchServersByAPI();
-        extension.stop();
-        expect(closeServerMock).toHaveBeenCalled();
+        const stopSpy = jest
+            .spyOn(extension, 'stopAPIServer')
+            .mockImplementation((cb) => cb?.());
+        const startSpy = jest
+            .spyOn(extension, 'startAPIServer')
+            .mockImplementation((cb) => cb?.());
+        configLoaderMock.mockReturnValueOnce({
+            // @ts-expect-error mock
+            userConfig: 'user_config_mock',
+        });
+        extension.reload();
+        expect(stopSpy).toHaveBeenCalled();
+        expect(startSpy).toHaveBeenCalled();
+        expect(extension.config).toBe('user_config_mock');
     });
+
+    test('stopAPIServer stops the API server', () => {
+        const extension = new SwitchServersByAPI();
+        const logSpy = jest.spyOn(extension, 'log');
+        const callback = jest.fn();
+        serverCloseMock.mockImplementationOnce((cb) => cb?.());
+        extension.stopAPIServer(callback);
+        expect(logSpy).toHaveBeenCalledWith({
+            message: 'The API server is now shutting down.',
+        });
+        expect(serverCloseMock).toHaveBeenCalled();
+        expect(logSpy).toHaveBeenCalledWith({
+            message: 'The API server has been shut down. Goodbye! ✨🔌',
+        });
+    });
+
+    test('stopAPIServer logs the error', () => {
+        const extension = new SwitchServersByAPI();
+        const logSpy = jest.spyOn(extension, 'log');
+        const callback = jest.fn();
+        serverCloseMock.mockImplementationOnce((cb) =>
+            cb?.(new Error('abcdef')),
+        );
+        extension.stopAPIServer(callback);
+        expect(logSpy).toHaveBeenCalledWith({
+            message: 'The API server is now shutting down.',
+        });
+        expect(serverCloseMock).toHaveBeenCalled();
+        expect(logSpy).toHaveBeenCalledWith({
+            message: `Failed to stop the API server. Error: abcdef`,
+        });
+    });
+
+    test('startAPIServer should be called when object is constructed', () => {
+        const startAPIServerSpy = jest
+            .spyOn(SwitchServersByAPI.prototype, 'startAPIServer')
+            .mockImplementationOnce(() => {});
+        new SwitchServersByAPI();
+        expect(startAPIServerSpy).toHaveBeenCalled();
+    });
+
+    test('startAPIServer should start listening by calling this.server.listen', () => {
+        // prevent ext from listening in constructor
+        jest.spyOn(
+            SwitchServersByAPI.prototype,
+            'startAPIServer',
+        ).mockImplementationOnce(() => {});
+
+        const processOnSpy = jest.spyOn(process, 'on');
+        expect(serverListenMock).not.toHaveBeenCalled();
+        const extension = new SwitchServersByAPI();
+        const logSpy = jest.spyOn(extension, 'log');
+        extension.startAPIServer(() => {
+            expect(serverListenMock).toHaveBeenCalledTimes(1);
+            expect(serverListenMock).toHaveBeenCalledWith(
+                config.port,
+                '0.0.0.0',
+                expect.anything(),
+            );
+            expect(processOnSpy).toHaveBeenCalledWith(
+                'SIGTERM',
+                expect.anything(),
+            );
+            expect(processOnSpy).toHaveBeenCalledWith(
+                'SIGINT',
+                expect.anything(),
+            );
+            expect(logSpy).toHaveBeenCalledWith({
+                message: `The API server is now live at http://127.0.0.1:${extension.config.port} ✅`,
+                submessage: `🌟 Check out the project on GitHub for updates: ${extension.githubUrl}`,
+            });
+        });
+    });
+
     test('getClientsArray', () => {
         const extension = new SwitchServersByAPI();
         // @ts-expect-error mock
@@ -151,6 +227,7 @@ describe('SwitchServersByAPI', () => {
             },
         });
     });
+
     test('GET / returns a list of clients and servers', () => {
         expect(handlersGet.length).toBe(0);
         const extension = new SwitchServersByAPI();
@@ -161,7 +238,7 @@ describe('SwitchServersByAPI', () => {
         // @ts-expect-error mock
         handlersGet[0][1]({}, { json: jsonMock });
         expect(jsonMock).toHaveBeenCalledTimes(1);
-        expect(jsonMock).toHaveBeenCalledWith({
+        expect(jsonMock).toHaveBeenCalledWith(200, {
             clients: [],
             servers: [],
         });
@@ -171,7 +248,7 @@ describe('SwitchServersByAPI', () => {
         // @ts-expect-error mock
         handlersGet[0][1]({}, { json: jsonMock });
         expect(jsonMock).toHaveBeenCalledTimes(1);
-        expect(jsonMock).toHaveBeenCalledWith({
+        expect(jsonMock).toHaveBeenCalledWith(200, {
             clients: [
                 {
                     name: 'name_1',
@@ -192,21 +269,22 @@ describe('SwitchServersByAPI', () => {
             servers: ['serverA', 'serverB'],
         });
     });
+
     test('POST / switches the client to a different the server', () => {
         expect(handlersPost.length).toBe(0);
         const extension = new SwitchServersByAPI();
         // @ts-expect-error mock
         extension.clients = new Map(CLIENTS_MOCK);
         expect(handlersPost.length).toBe(1);
-        const sendStatusMock = jest.fn();
+        const sendMock = jest.fn();
         // @ts-expect-error mock
         expect(handlersPost[0][0]).toBe('/');
         // @ts-expect-error mock
         handlersPost[0][1](
             { body: { clientUUID: 'uuid_1', serverName: 'serverB' } },
-            { sendStatus: sendStatusMock },
+            { send: sendMock },
         );
-        expect(sendStatusMock).toHaveBeenCalledWith(200);
+        expect(sendMock).toHaveBeenCalledWith(200, 'ok');
         expect(changeServerMockClient1).toHaveBeenCalledWith(
             SERVERS_MOCK['serverB'],
         );
@@ -214,7 +292,7 @@ describe('SwitchServersByAPI', () => {
         // @ts-expect-error mock
         handlersPost[0][1](
             { body: { clientUUID: 'uuid_3', serverName: 'serverA' } },
-            { sendStatus: sendStatusMock },
+            { send: sendMock },
         );
         expect(changeServerMockClient3).toHaveBeenCalledWith(
             SERVERS_MOCK['serverA'],

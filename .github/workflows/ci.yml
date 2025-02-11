@@ -1,6 +1,6 @@
-name: Node.js CI
+name: CI Build
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build_and_test:
@@ -17,10 +17,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           
-      - name: Install and test
+      - name: Install, lint and test
         run: |
           npm ci
-          npm run test
+          npm run lint
+          npm run test:ci
   
       - name: Prepare Release Artifact
         id: prepare_release
