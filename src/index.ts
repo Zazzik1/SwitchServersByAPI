@@ -1,10 +1,12 @@
 import Client from 'dimensions/client';
 import TerrariaServer from 'dimensions/terrariaserver';
 import { Extension } from 'dimensions/extension';
+import ListenServer from 'dimensions/listenserver';
+import RoutingServer from 'dimensions/routingserver';
+
 import HTTPServer from './util/HTTPServer';
 import ConfigLoader from './util/ConfigLoader';
 import { UserConfig, Verbosity } from './util/ConfigLoader/types';
-import RoutingServer from 'dimensions/routingserver';
 import defaultLogging, { Logging } from './util/logging';
 
 type ClientsArray = { uuid: string; name: string; serverName: string }[];
@@ -25,6 +27,7 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
     config: UserConfig;
     logging: Logging;
     storage: ExtensionStorage;
+    listenServers?: Record<string, ListenServer>;
 
     constructor(logging: Logging = defaultLogging) {
         const { userConfig, packageConfig } = ConfigLoader.load();
@@ -54,7 +57,7 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
      * it should not call the `startAPIServer` and this method should be called in
      * the constructor instead.
      */
-    load(storage: ExtensionStorage) {
+    load(storage: ExtensionStorage): void {
         this.storage = storage;
     }
 
@@ -74,7 +77,7 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
      * Dynamically reloads config (for CLI).
      * This method should not reset storage to default state.
      */
-    reload() {
+    reload(): void {
         this.stopAPIServer(() => {
             const { userConfig } = ConfigLoader.load();
             this.config = userConfig;
@@ -82,7 +85,7 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
         });
     }
 
-    /** Returns an array of clients in format for GET requests. */
+    /** Returns an array of clients for API responses. */
     getClientsArray(): ClientsArray {
         return [...this.storage.clients.values()].map((client) => ({
             uuid: client.UUID,
@@ -91,11 +94,32 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
         }));
     }
 
-    /** Returns an array of routing servers in format for GET requests. */
+    /** Returns an array of routing servers for API responses. */
     getRoutingServersArray(): RoutingServersArray {
         return [...this.storage.routingServers.values()].map(
             (server) => server.name,
         );
+    }
+
+    /**
+     * This method is called after the extension is loaded.
+     * It initializes the storage: `routingServers` and `clients`.
+     */
+    setListenServers(servers: Record<string, ListenServer>): void {
+        this.listenServers = servers;
+        const listenServers = Object.values(servers);
+        for (const listenServer of listenServers) {
+            const routingServers = Object.values(listenServer.servers);
+            for (const routingServer of routingServers) {
+                this.storage.routingServers.set(
+                    routingServer.name,
+                    routingServer,
+                );
+            }
+            for (const client of listenServer.clients) {
+                this.storage.clients.set(client.UUID, client);
+            }
+        }
     }
 
     /** Logs the provided message to stdout if the verbosity set in config is at least `level`. */
@@ -107,14 +131,14 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
         level?: Verbosity;
         message: string;
         submessage?: string;
-    }) {
+    }): void {
         if (this.config.verbosity < level) return;
         this.logging.info(`[Extension] ${this.name}: ${message}`);
         if (submessage) this.logging.info(submessage);
     }
 
     /** Starts the API server. */
-    startAPIServer(callback?: () => void) {
+    startAPIServer(callback?: () => void): void {
         this.server = new HTTPServer();
         if (!this.config.disabledEndpoints['/'].GET)
             this.server.get('/', async (_req, res) => {
@@ -175,7 +199,7 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
     }
 
     /** Stops the API server. */
-    stopAPIServer(callback?: () => void) {
+    stopAPIServer(callback?: () => void): void {
         if (!this.server) return callback?.();
         this.log({
             message: 'The API server is now shutting down.',
@@ -192,7 +216,7 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
         });
     }
 
-    recreateRoutingServersCache(routingServers: Client['servers']) {
+    recreateRoutingServersCache(routingServers: Client['servers']): void {
         // It's important to recreate routingServers and not cache it for too long,
         // because it is not guaranteed that the server list
         // will be constant for the entire lifecycle of the Dimensions.
@@ -204,7 +228,7 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
     }
 
     /** Called when new client connects. */
-    clientFullyConnectedHandler(client: Client) {
+    clientFullyConnectedHandler(client: Client): void {
         this.storage.clients.set(client.UUID, client);
         this.recreateRoutingServersCache(client.servers);
         this.log({
@@ -214,7 +238,7 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
     }
 
     /** Called when client disconnects. */
-    serverDisconnectHandler(server: TerrariaServer) {
+    serverDisconnectHandler(server: TerrariaServer): boolean {
         this.storage.clients.delete(server.client.UUID);
         this.recreateRoutingServersCache(server.client.servers);
         this.log({
