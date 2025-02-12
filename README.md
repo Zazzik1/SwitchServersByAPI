@@ -47,7 +47,7 @@ curl -X POST -d '{"serverName": "server_B", "clientUUID": "6c3577e1-0727-4b8c-92
 ### GET /
 Returns information about clients and servers.
 
-Note: The information about servers is returned only when at least one client is connected.
+Note: The information about servers is updated when any client connects or disconnects, so it is available in API only after at least one client connected.
 
 
 Example request:
