@@ -5,23 +5,30 @@ import HTTPServer from './util/HTTPServer';
 import ConfigLoader from './util/ConfigLoader';
 import { UserConfig, Verbosity } from './util/ConfigLoader/types';
 import RoutingServer from 'dimensions/routingserver';
+import defaultLogging, { Logging } from './util/logging';
 
 type ClientsArray = { uuid: string; name: string; serverName: string }[];
 type RoutingServersArray = string[];
-class SwitchServersByAPI implements Extension {
+type ExtensionStorage = {
+    clients: Map<string, Client>;
+    routingServers: Map<string, RoutingServer>;
+};
+
+class SwitchServersByAPI implements Extension<ExtensionStorage> {
     name: string;
     version: string;
     author: string;
     githubUrl: string;
     reloadable: boolean;
     reloadName: string;
-    clients: Map<string, Client>;
-    routingServers: Map<string, RoutingServer>;
     server?: HTTPServer;
     config: UserConfig;
+    logging: Logging;
+    storage: ExtensionStorage;
 
-    constructor() {
+    constructor(logging: Logging = defaultLogging) {
         const { userConfig, packageConfig } = ConfigLoader.load();
+        this.logging = logging;
         this.config = userConfig;
         this.name = packageConfig.name;
         this.version = `v${packageConfig.version}`;
@@ -29,26 +36,51 @@ class SwitchServersByAPI implements Extension {
         this.githubUrl = packageConfig.githubUrl;
         this.reloadable = true;
         this.reloadName = 'reload_switch_servers_by_api';
-        this.clients = new Map();
-        this.routingServers = new Map();
+        this.storage = {
+            clients: new Map(),
+            routingServers: new Map(),
+        }; // required for reloading
 
+        // TODO: remove when Dimensions implements a cleanup function.
         process.on('SIGTERM', () => this.stopAPIServer());
         process.on('SIGINT', () => this.stopAPIServer());
 
         this.startAPIServer();
     }
 
+    /**
+     * Loads temporary data if exist.
+     * This method is called when the extension is reloaded by Dimensions.
+     */
+    load(storage: ExtensionStorage) {
+        this.storage = storage;
+    }
+
+    /**
+     * Stops API server and saves temporary data.
+     * This data is stored until the Dimensions loads the extension again.
+     */
+    unload(): ExtensionStorage {
+        this.stopAPIServer();
+        return this.storage;
+    }
+
+    /** Reload dynamically through CLI. */
     reload() {
         this.stopAPIServer(() => {
             const { userConfig } = ConfigLoader.load();
             this.config = userConfig;
+            this.storage = {
+                clients: new Map(),
+                routingServers: new Map(),
+            };
             this.startAPIServer();
         });
     }
 
     /** Returns an array of clients in format for GET requests. */
     getClientsArray(): ClientsArray {
-        return [...this.clients.values()].map((client) => ({
+        return [...this.storage.clients.values()].map((client) => ({
             uuid: client.UUID,
             name: client.getName(),
             serverName: client.server.name,
@@ -57,7 +89,9 @@ class SwitchServersByAPI implements Extension {
 
     /** Returns an array of routing servers in format for GET requests. */
     getRoutingServersArray(): RoutingServersArray {
-        return [...this.routingServers.values()].map((server) => server.name);
+        return [...this.storage.routingServers.values()].map(
+            (server) => server.name,
+        );
     }
 
     /** Logs the provided message to stdout if the verbosity set in config is at least `level`. */
@@ -71,8 +105,8 @@ class SwitchServersByAPI implements Extension {
         submessage?: string;
     }) {
         if (this.config.verbosity < level) return;
-        console.log(`[Extension] ${this.name}:`, message);
-        if (submessage) console.log(submessage);
+        this.logging.info(`[Extension] ${this.name}: ${message}`);
+        if (submessage) this.logging.info(submessage);
     }
 
     /** Starts the API server. */
@@ -88,7 +122,10 @@ class SwitchServersByAPI implements Extension {
         if (!this.config.disabledEndpoints['/'].POST)
             this.server.post('/', async (req, res) => {
                 const { clientUUID, serverName } = req.body;
-                if (clientUUID == null || !this.clients.has(clientUUID)) {
+                if (
+                    clientUUID == null ||
+                    !this.storage.clients.has(clientUUID)
+                ) {
                     res.json(404, {
                         error: 'Client with such UUID does not exist.',
                         clientUUID,
@@ -96,7 +133,7 @@ class SwitchServersByAPI implements Extension {
                     });
                     return;
                 }
-                const client = this.clients.get(clientUUID)!;
+                const client = this.storage.clients.get(clientUUID)!;
                 const servers = Object.keys(client.servers);
                 if (serverName == null || !servers.includes(serverName)) {
                     res.json(404, {
@@ -159,12 +196,12 @@ class SwitchServersByAPI implements Extension {
         Object.values(routingServers).forEach((server) => {
             servers.set(server.name, server);
         });
-        this.routingServers = servers;
+        this.storage.routingServers = servers;
     }
 
     /** Called when new client connects. */
     clientFullyConnectedHandler(client: Client) {
-        this.clients.set(client.UUID, client);
+        this.storage.clients.set(client.UUID, client);
         this.recreateRoutingServersCache(client.servers);
         this.log({
             level: Verbosity.VERBOSE,
@@ -174,7 +211,7 @@ class SwitchServersByAPI implements Extension {
 
     /** Called when client disconnects. */
     serverDisconnectHandler(server: TerrariaServer) {
-        this.clients.delete(server.client.UUID);
+        this.storage.clients.delete(server.client.UUID);
         this.recreateRoutingServersCache(server.client.servers);
         this.log({
             level: Verbosity.VERBOSE,

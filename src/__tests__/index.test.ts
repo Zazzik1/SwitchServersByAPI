@@ -3,6 +3,7 @@ import packageJson from '../../package.json';
 import config from '../config.json';
 import HTTPServer from '../util/HTTPServer';
 import ConfigLoader from '../util/ConfigLoader';
+import defaultLogging from '../util/logging';
 
 let handlersGet: unknown[] = [];
 let handlersPost: unknown[] = [];
@@ -10,7 +11,7 @@ const changeServerMockClient1 = jest.fn();
 const changeServerMockClient2 = jest.fn();
 const changeServerMockClient3 = jest.fn();
 
-jest.spyOn(console, 'log').mockImplementation(() => {});
+jest.spyOn(defaultLogging, 'info').mockImplementation(() => {});
 const serverCloseMock = jest
     .spyOn(HTTPServer.prototype, 'close')
     .mockImplementation(() => {});
@@ -199,7 +200,7 @@ describe('SwitchServersByAPI', () => {
     test('getClientsArray', () => {
         const extension = new SwitchServersByAPI();
         // @ts-expect-error mock
-        extension.clients = new Map(CLIENTS_MOCK);
+        extension.storage.clients = new Map(CLIENTS_MOCK);
         expect(extension.getClientsArray()).toStrictEqual([
             {
                 name: 'name_1',
@@ -221,7 +222,7 @@ describe('SwitchServersByAPI', () => {
 
     test('clientFullyConnectedHandler adds the client to the map and calls recreateRoutingServersCache', () => {
         const extension = new SwitchServersByAPI();
-        expect(extension.clients).toStrictEqual(new Map());
+        expect(extension.storage.clients).toStrictEqual(new Map());
         const cacheSpy = jest
             .spyOn(extension, 'recreateRoutingServersCache')
             .mockImplementation(() => {});
@@ -232,13 +233,15 @@ describe('SwitchServersByAPI', () => {
         // @ts-expect-error mock
         extension.clientFullyConnectedHandler(client);
         expect(cacheSpy).toHaveBeenCalledWith(CLIENTS_MOCK_SERVERS);
-        expect(extension.clients.get('client_uuid')).toStrictEqual(client);
+        expect(extension.storage.clients.get('client_uuid')).toStrictEqual(
+            client,
+        );
     });
 
     test('serverDisconnectHandler removes the client from the map', () => {
         const extension = new SwitchServersByAPI();
         // @ts-expect-error mock
-        extension.clients = new Map(CLIENTS_MOCK);
+        extension.storage.clients = new Map(CLIENTS_MOCK);
         const cacheSpy = jest
             .spyOn(extension, 'recreateRoutingServersCache')
             .mockImplementation(() => {});
@@ -251,9 +254,9 @@ describe('SwitchServersByAPI', () => {
         // @ts-expect-error mock
         extension.serverDisconnectHandler(server);
         expect(cacheSpy).toHaveBeenCalledWith(CLIENTS_MOCK_SERVERS);
-        expect(extension.clients.has('uuid_1')).toBe(true);
-        expect(extension.clients.has('uuid_2')).toBe(false);
-        expect(extension.clients.has('uuid_3')).toBe(true);
+        expect(extension.storage.clients.has('uuid_1')).toBe(true);
+        expect(extension.storage.clients.has('uuid_2')).toBe(false);
+        expect(extension.storage.clients.has('uuid_3')).toBe(true);
     });
 
     test('GET / returns a list of clients and servers', () => {
@@ -273,9 +276,9 @@ describe('SwitchServersByAPI', () => {
         });
         jsonMock.mockClear();
         // @ts-expect-error mock
-        extension.clients = new Map(CLIENTS_MOCK);
+        extension.storage.clients = new Map(CLIENTS_MOCK);
         // @ts-expect-error mock
-        extension.routingServers = new Map(SERVERS_MOCK);
+        extension.storage.routingServers = new Map(SERVERS_MOCK);
         // @ts-expect-error mock
         handlersGet[0][1]({}, { send: sendMock, json: jsonMock });
         expect(jsonMock).toHaveBeenCalledTimes(1);
@@ -305,9 +308,9 @@ describe('SwitchServersByAPI', () => {
         test('switches the client to a different server', () => {
             const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
-            extension.clients = new Map(CLIENTS_MOCK);
+            extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
-            extension.routingServers = new Map(SERVERS_MOCK);
+            extension.storage.routingServers = new Map(SERVERS_MOCK);
             expect(handlersPost.length).toBe(1);
             const sendMock = jest.fn();
             const jsonMock = jest.fn();
@@ -343,9 +346,9 @@ describe('SwitchServersByAPI', () => {
         test('should validate the input - clientUUID is missing', () => {
             const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
-            extension.clients = new Map(CLIENTS_MOCK);
+            extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
-            extension.routingServers = new Map(SERVERS_MOCK);
+            extension.storage.routingServers = new Map(SERVERS_MOCK);
             expect(handlersPost.length).toBe(1);
             const sendMock = jest.fn();
             const jsonMock = jest.fn();
@@ -372,9 +375,9 @@ describe('SwitchServersByAPI', () => {
         test('should validate the input - serverName is missing', () => {
             const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
-            extension.clients = new Map(CLIENTS_MOCK);
+            extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
-            extension.routingServers = new Map(SERVERS_MOCK);
+            extension.storage.routingServers = new Map(SERVERS_MOCK);
             expect(handlersPost.length).toBe(1);
             const sendMock = jest.fn();
             const jsonMock = jest.fn();
@@ -401,9 +404,9 @@ describe('SwitchServersByAPI', () => {
         test('should validate the input - client with uuid=clientUUID does not exist', () => {
             const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
-            extension.clients = new Map(CLIENTS_MOCK);
+            extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
-            extension.routingServers = new Map(SERVERS_MOCK);
+            extension.storage.routingServers = new Map(SERVERS_MOCK);
             expect(handlersPost.length).toBe(1);
             const sendMock = jest.fn();
             const jsonMock = jest.fn();
@@ -431,9 +434,9 @@ describe('SwitchServersByAPI', () => {
         test('should validate the input - server with name=serverName does not exist', () => {
             const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
-            extension.clients = new Map(CLIENTS_MOCK);
+            extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
-            extension.routingServers = new Map(SERVERS_MOCK);
+            extension.storage.routingServers = new Map(SERVERS_MOCK);
             expect(handlersPost.length).toBe(1);
             const sendMock = jest.fn();
             const jsonMock = jest.fn();
@@ -461,9 +464,9 @@ describe('SwitchServersByAPI', () => {
         test('should handle error if client.changeServer fails', () => {
             const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
-            extension.clients = new Map(CLIENTS_MOCK);
+            extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
-            extension.routingServers = new Map(SERVERS_MOCK);
+            extension.storage.routingServers = new Map(SERVERS_MOCK);
             expect(handlersPost.length).toBe(1);
             const sendMock = jest.fn();
             const jsonMock = jest.fn();
@@ -507,11 +510,15 @@ describe('SwitchServersByAPI', () => {
             server_C: { name: 'server_C' },
             server_D: { name: 'server_D' },
         };
-        expect(!extension.routingServers.has('server_C'));
-        expect(!extension.routingServers.has('server_D'));
+        expect(!extension.storage.routingServers.has('server_C'));
+        expect(!extension.storage.routingServers.has('server_D'));
         // @ts-expect-error mock
         extension.recreateRoutingServersCache(servers);
-        expect(extension.routingServers.get('server_C')).toBe(servers.server_C);
-        expect(extension.routingServers.get('server_D')).toBe(servers.server_D);
+        expect(extension.storage.routingServers.get('server_C')).toBe(
+            servers.server_C,
+        );
+        expect(extension.storage.routingServers.get('server_D')).toBe(
+            servers.server_D,
+        );
     });
 });
