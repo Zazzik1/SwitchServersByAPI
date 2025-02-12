@@ -49,31 +49,35 @@ class SwitchServersByAPI implements Extension<ExtensionStorage> {
     }
 
     /**
-     * Loads temporary data if exist.
-     * This method is called when the extension is reloaded by Dimensions.
+     * This method is called only when the extension is loaded by Dimensions
+     * after previously being stopped using the `unload` method. Because of it,
+     * it should not call the `startAPIServer` and this method should be called in
+     * the constructor instead.
      */
     load(storage: ExtensionStorage) {
         this.storage = storage;
     }
 
     /**
-     * Stops API server and saves temporary data.
-     * This data is stored until the Dimensions loads the extension again.
+     * This method is called when the extension is supposed to stop working.
+     * - stops API server
+     * - saves the storage to Dimensions
+     * The saved storage is loaded again using `load` method when
+     * the Dimensions loads the extension again.
      */
     unload(): ExtensionStorage {
         this.stopAPIServer();
         return this.storage;
     }
 
-    /** Reload dynamically through CLI. */
+    /**
+     * Dynamically reloads config (for CLI).
+     * This method should not reset storage to default state.
+     */
     reload() {
         this.stopAPIServer(() => {
             const { userConfig } = ConfigLoader.load();
             this.config = userConfig;
-            this.storage = {
-                clients: new Map(),
-                routingServers: new Map(),
-            };
             this.startAPIServer();
         });
     }
