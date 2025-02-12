@@ -33,29 +33,30 @@ Edit the `config.json` file to update the following settings:
 ## Available endpoints
 
 ### POST /
-Switches the client to a server with name described by a `serverName` parameter.
+_Switches the client to a server with name described by a `serverName` parameter._
 
-Parameters:
+**Note:** Currenlty, the API server does not validate the `Content-Type` header. It expects all incoming data to be in JSON, so sending data in formats like `form-data` or `x-www-form-urlencoded` will not work as expected.
+
+**Parameters:**
 - `clientUUID` - required
 - `serverName` - required
 
-Example request:
+**Example request:**
 ```sh
 curl -X POST -d '{"serverName": "server_B", "clientUUID": "6c3577e1-0727-4b8c-92b4-ea28953dda39"}' "http://127.0.0.1:3000"
 ```
 
 ### GET /
-Returns information about clients and servers.
+_Returns information about clients and servers._
 
-Note: The information about servers is updated when any client connects or disconnects, so it is available in API only after at least one client connected.
+**Note:** The information about servers is updated whenever a client connects or disconnects and becomes available in the API only after at least one client has connected.
 
-
-Example request:
+**Example request:**
 ```sh
 curl "http://127.0.0.1:3000"
 ```
 
-Example response:
+**Example response:**
 ```json
 {
     "servers": [
