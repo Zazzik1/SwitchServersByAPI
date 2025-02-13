@@ -1,6 +1,6 @@
 {
     "name": "switch_servers_by_api",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "main": "src/index.ts",
     "scripts": {
         "build": "rimraf dist build && tsc && rollup -c rollup.config.js",

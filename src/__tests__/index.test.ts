@@ -220,48 +220,10 @@ describe('SwitchServersByAPI', () => {
         ]);
     });
 
-    test('clientFullyConnectedHandler adds the client to the map and calls recreateRoutingServersCache', () => {
-        const extension = new SwitchServersByAPI();
-        expect(extension.storage.clients).toStrictEqual(new Map());
-        const cacheSpy = jest
-            .spyOn(extension, 'recreateRoutingServersCache')
-            .mockImplementation(() => {});
-        const client = {
-            UUID: 'client_uuid',
-            servers: CLIENTS_MOCK_SERVERS,
-        };
-        // @ts-expect-error mock
-        extension.clientFullyConnectedHandler(client);
-        expect(cacheSpy).toHaveBeenCalledWith(CLIENTS_MOCK_SERVERS);
-        expect(extension.storage.clients.get('client_uuid')).toStrictEqual(
-            client,
-        );
-    });
-
-    test('serverDisconnectHandler removes the client from the map', () => {
-        const extension = new SwitchServersByAPI();
-        // @ts-expect-error mock
-        extension.storage.clients = new Map(CLIENTS_MOCK);
-        const cacheSpy = jest
-            .spyOn(extension, 'recreateRoutingServersCache')
-            .mockImplementation(() => {});
-        const server = {
-            client: {
-                UUID: 'uuid_2',
-                servers: CLIENTS_MOCK_SERVERS,
-            },
-        };
-        // @ts-expect-error mock
-        extension.serverDisconnectHandler(server);
-        expect(cacheSpy).toHaveBeenCalledWith(CLIENTS_MOCK_SERVERS);
-        expect(extension.storage.clients.has('uuid_1')).toBe(true);
-        expect(extension.storage.clients.has('uuid_2')).toBe(false);
-        expect(extension.storage.clients.has('uuid_3')).toBe(true);
-    });
-
     test('GET / returns a list of clients and servers', () => {
         expect(handlersGet.length).toBe(0);
         const extension = new SwitchServersByAPI();
+        jest.spyOn(extension, 'updateStorage').mockImplementation(() => {});
         expect(handlersGet.length).toBe(1);
         // @ts-expect-error mock
         expect(handlersGet[0][0]).toBe('/');
@@ -305,8 +267,12 @@ describe('SwitchServersByAPI', () => {
     });
 
     describe('POST /', () => {
+        let extension: SwitchServersByAPI;
+        beforeEach(() => {
+            extension = new SwitchServersByAPI();
+            jest.spyOn(extension, 'updateStorage').mockImplementation(() => {});
+        });
         test('switches the client to a different server', () => {
-            const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
             extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
@@ -344,7 +310,6 @@ describe('SwitchServersByAPI', () => {
         });
 
         test('should validate the input - clientUUID is missing', () => {
-            const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
             extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
@@ -373,7 +338,6 @@ describe('SwitchServersByAPI', () => {
             expect(changeServerMockClient1).not.toHaveBeenCalled();
         });
         test('should validate the input - serverName is missing', () => {
-            const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
             extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
@@ -402,7 +366,6 @@ describe('SwitchServersByAPI', () => {
             expect(changeServerMockClient1).not.toHaveBeenCalled();
         });
         test('should validate the input - client with uuid=clientUUID does not exist', () => {
-            const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
             extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
@@ -432,7 +395,6 @@ describe('SwitchServersByAPI', () => {
             expect(changeServerMockClient1).not.toHaveBeenCalled();
         });
         test('should validate the input - server with name=serverName does not exist', () => {
-            const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
             extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
@@ -462,7 +424,6 @@ describe('SwitchServersByAPI', () => {
             expect(changeServerMockClient1).not.toHaveBeenCalled();
         });
         test('should handle error if client.changeServer fails', () => {
-            const extension = new SwitchServersByAPI();
             // @ts-expect-error mock
             extension.storage.clients = new Map(CLIENTS_MOCK);
             // @ts-expect-error mock
@@ -502,23 +463,5 @@ describe('SwitchServersByAPI', () => {
                 toServer: 'server_B',
             });
         });
-    });
-
-    test('recreateRoutingServersCache', () => {
-        const extension = new SwitchServersByAPI();
-        const servers = {
-            server_C: { name: 'server_C' },
-            server_D: { name: 'server_D' },
-        };
-        expect(!extension.storage.routingServers.has('server_C'));
-        expect(!extension.storage.routingServers.has('server_D'));
-        // @ts-expect-error mock
-        extension.recreateRoutingServersCache(servers);
-        expect(extension.storage.routingServers.get('server_C')).toBe(
-            servers.server_C,
-        );
-        expect(extension.storage.routingServers.get('server_D')).toBe(
-            servers.server_D,
-        );
     });
 });
