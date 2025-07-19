@@ -31,16 +31,57 @@ jobs:
       
       - name: Upload Release Artifact
         uses: actions/upload-artifact@v4
-        if: contains(github.ref, 'tags/v')
         continue-on-error: true
         with:
           name: release-archive
           path: releases/*
 
+  test_integration_with_dimensions:
+    runs-on: ubuntu-latest
+    needs: [build_and_test]
+
+    steps:
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 20.x
+
+      - name: Download the extension from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-archive
+          path: releases
+
+      - name: Setup Dimensions
+        run: |
+          DIMENSIONS_VERSION=6.1.0
+          wget https://github.com/popstarfreas/Dimensions/releases/download/v$DIMENSIONS_VERSION/Dimensions-v$DIMENSIONS_VERSION.zip -O dimensions.zip
+          unzip dimensions.zip
+          cd Dimensions
+          npm install --omit=dev
+          cp config.js.example config.js
+          mkdir build/extensions
+      
+      - name: Install the extension in Dimensions
+        run: |
+          cd releases
+          rm *.zip
+          mv * ../Dimensions/build/extensions/
+
+      - name: Check if the extension works
+        run: |
+          cd Dimensions
+          npm run start &
+          PID=$!
+          sleep 10
+          timeout 3 bash -c "</dev/tcp/127.0.0.1/3000" && echo "Open" || echo "Closed"
+          curl http://127.0.0.1:3000 | jq
+          kill $PID
+
   release:
     runs-on: ubuntu-latest
     if: contains(github.ref, 'tags/v')
-    needs: [build_and_test]
+    needs: [test_integration_with_dimensions]
 
     steps:
       - name: Download Release Artifact
