@@ -75,7 +75,10 @@ jobs:
           PID=$!
           sleep 10
           timeout 3 bash -c "</dev/tcp/127.0.0.1/3000" && echo "Open" || echo "Closed"
-          curl http://127.0.0.1:3000 | jq
+          response=$(curl http://127.0.0.1:3000)
+          jq . <<< "$response"
+          jq -e 'select(.servers | length > 0)' <<< "$response"
+          jq -e 'select(.clients | length == 0)' <<< "$response"
           kill $PID
 
   release:
